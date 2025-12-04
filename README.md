@@ -1,45 +1,70 @@
-# THIS REPOSITORY IS NO LONGER MAINTAINED
+# IBIS to SPICE Converter
 
-# pybis2spice
-A python tool that converts IBIS models to SPICE models. The ibis model types currently supported are: 
+A Python tool for converting IBIS (I/O Buffer Information Specification) models to SPICE subcircuits for circuit simulation.
+
+## Overview
+
+This tool converts IBIS models into SPICE-compatible subcircuits that can be used in various circuit simulators. It supports multiple IBIS model types and provides both GUI and command-line interfaces.
+
+### Supported IBIS Model Types
 * Input
 * Output
 * 3-State
 * Open_Drain
 * I/O
 
+## Features
+
+* **GUI Application**: User-friendly interface for browsing and converting IBIS files
+* **Model Visualization**: View I-V curves and Voltage-Time characteristics
+* **Multiple Corners**: Generate models for Weak-Slow, Typical, Fast-Strong, or all corners
+* **LTSpice Integration**: Automatic generation of LTSpice-compatible subcircuits and symbols
+* **Generic SPICE Support**: Create subcircuits compatible with most SPICE simulators
+
 ## Usage
-The bin folder holds a zipped file for each released version containing a windows executable program that can be run standalone.
 
-![](/img/gui-window.png)
+### GUI Application
+Run the executable from the `bin` folder or use the Python GUI:
 
-### The executable program allows the user to:
-* Browse for an ibis model file
-* Select the component and the model
-* Create the SPICE subcircuit files
-* View the ibis model characteristics (I-V and Voltage-Time graphs)
+```bash
+python gui/pybis2spice-gui.py
+```
 
-![](/img/gui-check-model.png)
+The GUI allows you to:
+1. Browse for an IBIS model file
+2. Select the component and model
+3. Choose corner conditions (Weak-Slow, Typical, Fast-Strong)
+4. Generate SPICE subcircuits
+5. View model characteristics
 
+### Command Line
+```bash
+python demo_conversion.py
+```
 
-### Spice Subcircuit option: 
-* LTSpice: LTSpice option produces a subcircuit file and corresponding LTSpice symbol file. 
-This option creates a subcircuit that is specifically intended to be used with LTSpice. 
-This is the recommended option as it provides the most flexibility for output model stimulus sources. 
-* Generic: generic option produces a subcircuit file that most Spice simulators should be able to parse.
-
-### Corner Select: 
-* Weak-Slow: Combines the minimum (weak) I-V curves and minimum (slow) Voltage-Time waveforms   
-* Typical: Combines the typical I-V curves and typical Voltage-Time waveforms
-* Fast-Strong: Combines the maximum (strong) I-V curves and maximum (fast) Voltage-Time waveforms
-* All: Creates the subcircuit files for all corners simultaneously
+See `CONVERSION_WALKTHROUGH.md` and `IBIS_TO_SPICE_GUIDE.md` for detailed usage instructions.
 
 ## Examples
-LTSpice examples are given to highlight the different options available. 
-These are available in the examples folder
 
+LTSpice examples demonstrating various use cases are available in the `examples/` folder, including:
+* Analog Devices LTC2879 (RS485)
+* Nexperia LVC1G07
+* NXP HCT1G08
+* STMicroelectronics STM32G031
+* Texas Instruments SN74LV1T34
+* And more...
 
 ## References
-The tool would not be possible without the ecdtools library. This parses the ibis file into python data structures.
-https://ecdtools.readthedocs.io/en/latest/#
+
+This tool uses the [ecdtools library](https://ecdtools.readthedocs.io/en/latest/) for parsing IBIS files into Python data structures.
+
+## Credits
+
+This project is based on [pybis2spice](https://github.com/kamratia1/pybis2spice) by Kishan Amratia.
+
+## License
+
+MIT License - See LICENSE file for details.
+
+Original Copyright (c) 2021 Kishan Amratia
 
