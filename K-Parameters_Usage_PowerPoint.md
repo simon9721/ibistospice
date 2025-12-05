@@ -6,37 +6,50 @@
 
 ### Left Column: SPICE Implementation
 
-**1. Behavioral Sources (multiply I-V table by K-parameters)**
+**1. PWL Voltage Sources (from extracted tables)**
 ```spice
+* Extracted arrays: kr = [[time, ku, kd], ...]
+* Creates voltage nodes K_U_RISE, K_D_RISE, K_U_FALL, K_D_FALL
+V20 K_U_RISE 0 PWL(0ns 1.000, 0.068ns 0.999, 
+                    0.136ns 0.982, ..., 5.85ns 0.001)
+V21 K_U_FALL 0 PWL(...)
+V40 K_D_RISE 0 PWL(0ns 0.001, 0.068ns 0.002,
+                    0.136ns 0.023, ..., 5.85ns 1.000)
+V41 K_D_FALL 0 PWL(...)
+```
+→ **Each (time, value) pair comes directly from extracted Ku/Kd arrays**
+
+**2. Switching Logic (selects rise vs fall waveforms)**
+```spice
+* Routes correct PWL waveform based on input edge
+B1 Ku 0 V={rising_edge ? V(K_U_RISE) : V(K_U_FALL)}
+B2 Kd 0 V={rising_edge ? V(K_D_RISE) : V(K_D_FALL)}
+```
+→ **Creates V(Ku) and V(Kd) nodes that behavioral sources use**
+
+**3. Behavioral Sources (multiply I-V table by K-parameters)**
+```spice
+* I-V pairs from IBIS [Pullup]/[Pulldown] tables
 B3 DIE PULLUP_REF I={V(Ku) * table(V(DIE), 
    -6.0, -0.105, ..., 10.5, 2.34)}
 
 B4 DIE PULLDOWN_REF I={V(Kd) * table(V(DIE), 
    -5.5, -2.37, ..., 11.0, 0.089)}
 ```
-
-**2. PWL Voltage Sources (from extracted tables)**
-```spice
-* Extracted arrays: kr = [[time, ku, kd], ...]
-V20 K_U_RISE 0 PWL(0ns 1.000, 0.068ns 0.999, 
-                    0.136ns 0.982, ..., 5.85ns 0.001)
-
-V40 K_D_RISE 0 PWL(0ns 0.001, 0.068ns 0.002,
-                    0.136ns 0.023, ..., 5.85ns 1.000)
-```
-→ **Each (time, value) pair comes directly from extracted Ku/Kd arrays**
+→ **V(Ku)/V(Kd) scale the I-V curves dynamically during simulation**
 
 ### Right Column: Simulation Flow
 
 **At each time step t:**
 ```
-1. Read V(Ku) and V(Kd) from PWL sources
-2. Measure V(DIE) at output node
-3. Lookup I_pullup(V_DIE) from I-V table
-4. Lookup I_pulldown(V_DIE) from I-V table
-5. Calculate: I = Ku×I_pullup + Kd×I_pulldown + clamps
-6. Apply current → solve for new V(DIE)
-7. Repeat for next time step
+1. Read PWL waveforms (K_U_RISE, K_D_RISE, etc.)
+2. Switching logic selects → V(Ku) and V(Kd)
+3. Measure V(DIE) at output node
+4. Lookup I_pullup(V_DIE) from I-V table (IBIS [Pullup])
+5. Lookup I_pulldown(V_DIE) from I-V table (IBIS [Pulldown])
+6. Calculate: I = Ku×I_pullup + Kd×I_pulldown + clamps
+7. Apply current → solve for new V(DIE)
+8. Repeat for next time step
 ```
 
 **Example Values (Rising Edge @ 1ns):**
