@@ -14,17 +14,47 @@ B4 DIE PULLDOWN_REF I={V(Kd) * table(V(DIE), -5.5, -2.37, ..., 11.0, 0.089)}
 
 ### K-Parameter PWL Voltage Sources
 
-```spice
-* Rising edge Ku waveform (pullup turns OFF)
-V20 K_U_RISE 0 PWL(0ns 1.0, 0.5ns 0.85, 1.0ns 0.65, ..., 5.0ns 0.0)
+**Yes! The PWL values come directly from the extracted Ku/Kd tables.**
 
-* Rising edge Kd waveform (pulldown turns ON)  
-V40 K_D_RISE 0 PWL(0ns 0.0, 0.5ns 0.15, 1.0ns 0.45, ..., 5.0ns 1.0)
+The extraction algorithm (from `solve_k_params_output()`) produces arrays like:
 
-* Falling edge patterns (inverse)
-V21 K_U_FALL 0 PWL(...)
-V41 K_D_FALL 0 PWL(...)
+```python
+# Rising edge K-parameters (from solving 2×2 system at each time point)
+kr = [[time_0, ku_0, kd_0],     # [0.0ns,    1.000, 0.001]
+      [time_1, ku_1, kd_1],     # [0.068ns,  0.999, 0.002]
+      [time_2, ku_2, kd_2],     # [0.136ns,  0.982, 0.023]
+      ...                       # ...
+      [time_n, ku_n, kd_n]]     # [5.85ns,   0.001, 1.000]
 ```
+
+These arrays are then converted to SPICE PWL format:
+
+```spice
+* Rising edge Ku waveform (pullup turns OFF during rising edge)
+V20 K_U_RISE 0 PWL(0ns 1.000, 0.068ns 0.999, 0.136ns 0.982, ..., 5.85ns 0.001)
+                    ↑           ↑             ↑
+                   time_0      time_1        time_2
+                   ku_0        ku_1          ku_2
+
+* Rising edge Kd waveform (pulldown turns ON during rising edge)  
+V40 K_D_RISE 0 PWL(0ns 0.001, 0.068ns 0.002, 0.136ns 0.023, ..., 5.85ns 1.000)
+                    ↑           ↑             ↑
+                   time_0      time_1        time_2
+                   kd_0        kd_1          kd_2
+```
+
+**The Process:**
+1. Extract Ku/Kd from IBIS waveforms → numpy arrays `kr[time, ku, kd]`
+2. Compress arrays (reduce redundant points) → ~100-200 points
+3. Format as PWL strings: `f"{time*1e9}ns {ku_value}"`
+4. Write to SPICE subcircuit file
+
+**Example from real generated file:**
+```spice
+V20 K_U_RISE 0 PWL({delay}, 0.0012496, {delay+6.8182e-11}, -0.0119220, 
+    {delay+1.3636e-10}, -0.0430763, ..., {delay+5.85e-09}, 1.0003445)
+```
+Each `(time, value)` pair is a data point from the extracted Ku/Kd table!
 
 ---
 
