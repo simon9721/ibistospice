@@ -10,11 +10,11 @@
 ```spice
 * Extracted arrays: kr = [[time, ku, kd], ...]
 * Creates voltage nodes K_U_RISE, K_D_RISE, K_U_FALL, K_D_FALL
-V20 K_U_RISE 0 PWL(0ns 1.000, 0.068ns 0.999, 
-                    0.136ns 0.982, ..., 5.85ns 0.001)
+V20 K_U_RISE 0 PWL(0ns 0.001, 0.068ns 0.018, 
+                    0.136ns 0.082, ..., 5.85ns 0.999)
 V21 K_U_FALL 0 PWL(...)
-V40 K_D_RISE 0 PWL(0ns 0.001, 0.068ns 0.002,
-                    0.136ns 0.023, ..., 5.85ns 1.000)
+V40 K_D_RISE 0 PWL(0ns 0.999, 0.068ns 0.982,
+                    0.136ns 0.918, ..., 5.85ns 0.001)
 V41 K_D_FALL 0 PWL(...)
 ```
 → **Each (time, value) pair comes directly from extracted Ku/Kd arrays**
@@ -56,11 +56,11 @@ B4 DIE PULLDOWN_REF I={V(Kd) * table(V(DIE),
 
 | Time | Ku   | Kd   | V_out | State          |
 |------|------|------|-------|----------------|
-| 0.0  | 1.00 | 0.00 | 5.0V  | High           |
-| 0.5  | 0.88 | 0.05 | 4.8V  | Start switch   |
-| 1.0  | 0.66 | 0.46 | 3.5V  | Mid-transition |
-| 1.5  | 0.33 | 0.77 | 1.8V  | Accelerating   |
-| 2.5  | 0.00 | 1.00 | 0.0V  | Low            |
+| 0.0  | 0.00 | 1.00 | 0.0V  | Low            |
+| 0.5  | 0.12 | 0.95 | 0.5V  | Start switch   |
+| 1.0  | 0.34 | 0.54 | 1.8V  | Mid-transition |
+| 1.5  | 0.67 | 0.23 | 3.5V  | Accelerating   |
+| 2.5  | 1.00 | 0.00 | 5.0V  | High           |
 
 ### Bottom: Key Points
 ✓ **Accurate** - Reproduces IBIS waveforms exactly  
