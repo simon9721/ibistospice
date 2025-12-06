@@ -30,24 +30,64 @@ kr = [[time_0, ku_0, kd_0],     # [0.0ns,    1.000, 0.001]
 These arrays are then converted to SPICE PWL format:
 
 ```spice
-* Rising edge Ku waveform (pullup turns OFF during rising edge)
-V20 K_U_RISE 0 PWL(0ns 1.000, 0.068ns 0.999, 0.136ns 0.982, ..., 5.85ns 0.001)
-                    ↑           ↑             ↑
-                   time_0      time_1        time_2
-                   ku_0        ku_1          ku_2
+* Rising edge Ku waveform (pullup turns ON during rising edge)
+* Uses dynamic delay parameter to retrigger on each edge
+V20 K_U_RISE 0 PWL({delay_rise}, 0.001, 
+                    {delay_rise+0.068ns}, 0.018,
+                    {delay_rise+0.136ns}, 0.082, 
+                    ..., 
+                    {delay_rise+5.85ns}, 0.999)
+                    ↑                    ↑
+                delay updated by     relative timing
+                edge detection       from edge
 
-* Rising edge Kd waveform (pulldown turns ON during rising edge)  
-V40 K_D_RISE 0 PWL(0ns 0.001, 0.068ns 0.002, 0.136ns 0.023, ..., 5.85ns 1.000)
-                    ↑           ↑             ↑
-                   time_0      time_1        time_2
-                   kd_0        kd_1          kd_2
+* Rising edge Kd waveform (pulldown turns OFF during rising edge)  
+V40 K_D_RISE 0 PWL({delay_rise}, 0.999,
+                    {delay_rise+0.068ns}, 0.982,
+                    {delay_rise+0.136ns}, 0.918,
+                    ...,
+                    {delay_rise+5.85ns}, 0.001)
 ```
 
 **The Process:**
 1. Extract Ku/Kd from IBIS waveforms → numpy arrays `kr[time, ku, kd]`
 2. Compress arrays (reduce redundant points) → ~100-200 points
-3. Format as PWL strings: `f"{time*1e9}ns {ku_value}"`
+3. Format as PWL strings with delay parameter: `f"{delay_rise+time*1e9}ns {ku_value}"`
 4. Write to SPICE subcircuit file
+
+### How Multiple Edges Work: Dynamic Delay Mechanism
+
+**Key Insight:** PWL waveforms use a **delay parameter** that gets updated on each edge, effectively "replaying" the waveform with new timing.
+
+**For regular pulse inputs:**
+
+```
+Time:        0ns   10ns   15.85ns   50ns   55.85ns   110ns  115.85ns
+Input:       0V    →5V    5V        →0V    0V        →5V    5V
+             LOW   RISE   HIGH      FALL   LOW       RISE   HIGH
+
+delay_rise:  -     10ns   10ns      10ns   10ns      110ns  110ns
+                   ↑ updated        (frozen)         ↑ updated again
+
+K_U_RISE:    0.001 [Playing 10→15.85ns] ─── 0.999 ─── [Playing 110→115.85ns]
+                   0.001→0.999                        0.001→0.999
+```
+
+**Mechanism:**
+1. **Edge Detection:** Input crosses threshold (e.g., V(IN) crosses 2.5V)
+2. **Update Delay:** `delay_rise = current_time` (e.g., delay_rise = 110ns)
+3. **PWL Shifts:** Entire waveform timeline shifts to start at new delay
+4. **Waveform Plays:** K-parameters transition over next ~6ns
+5. **Hold:** After waveform ends, values freeze until next edge
+6. **Repeat:** Next edge updates delay again, "replaying" the transition
+
+**This enables:**
+- Multiple transitions without redefining waveforms
+- Each edge gets the same K-parameter profile
+- Works for any input pattern (pulses, random, etc.)
+- Natural handling of stuck high/low (waveform just stays at final value)
+
+**Limitation:** If edges come too fast (< ~20ns apart), waveforms overlap and model accuracy degrades - matches real hardware toggle rate limits!
 
 **Example from real generated file:**
 ```spice

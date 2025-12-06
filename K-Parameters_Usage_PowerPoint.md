@@ -19,15 +19,25 @@ V41 K_D_FALL 0 PWL(...)
 ```
 → **Each (time, value) pair comes directly from extracted Ku/Kd arrays**
 
-**2. Switching Logic (selects rise vs fall waveforms)**
+**2. Dynamic Delay for Multiple Edges**
+```spice
+* PWL waveforms use delay parameter that updates on each edge
+* Edge detection sets delay to current time when threshold crossed
+V20 K_U_RISE 0 PWL({delay_rise}, 0.001, 
+                    {delay_rise+0.068ns}, 0.018, ...,
+                    {delay_rise+5.85ns}, 0.999)
+```
+→ **Delay parameter "replays" the waveform at each new edge**
+
+**3. Switching Logic (selects rise vs fall waveforms)**
 ```spice
 * Routes correct PWL waveform based on input edge
-B1 Ku 0 V={rising_edge ? V(K_U_RISE) : V(K_U_FALL)}
-B2 Kd 0 V={rising_edge ? V(K_D_RISE) : V(K_D_FALL)}
+B1 Ku 0 V={V(IN) > Vth ? V(K_U_RISE) : V(K_U_FALL)}
+B2 Kd 0 V={V(IN) > Vth ? V(K_D_RISE) : V(K_D_FALL)}
 ```
 → **Creates V(Ku) and V(Kd) nodes that behavioral sources use**
 
-**3. Behavioral Sources (multiply I-V table by K-parameters)**
+**4. Behavioral Sources (multiply I-V table by K-parameters)**
 ```spice
 * I-V pairs from IBIS [Pullup]/[Pulldown] tables
 B3 DIE PULLUP_REF I={V(Ku) * table(V(DIE), 
